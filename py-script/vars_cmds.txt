@@ -1,0 +1,121 @@
+# Essential VAR's and CMD's for the evse_manager interface
+# date-time variables are according to RFC3339 UTC
+
+VARs:
+    evse_id = "NL*DCO*E1234*1"
+    
+    ready = bool
+    
+    session_event = object
+        uuid = "sessionString"
+        timestamp = "date-time"
+        event = "eventEnum"
+    
+    limits = object
+        uuid = "EVSE"
+        max_current = 32
+        nr_of_phases_available = 1
+    
+    enforced_limits = object
+        uuid = "NODE"
+        valid_until = "date-time"
+        limits_root = object
+            total_power_W = 20000
+    
+    hw_capablities = object
+        max_current_A_import = float
+        min_current_A_import = float
+        max_phase_count_import = 1
+        min_phase_count_import = 1
+        max_current_A_export = float
+        min_current_A_export = float
+        max_phase_count_export = 1
+        min_phase_count_export = 1
+        supports_changing_phases_during_charging = False
+        max_plug_temperature_C = 75
+        connector_type = "IEC62196Type2Cable"
+    
+    ev_info = object # if available
+        soc = "%"
+        present_voltage = "V"
+        present_current = "A"
+        target_voltage = "V"
+        target_current = "A"
+        maximum_current_limit = "A"
+        minimum_current_limit = "A"
+        maximum_voltage_limit = "V"
+        minimum_voltage_limit = "V"
+        estimated_time_full = "date-time"
+        departure_time = "date-time"
+        estimated_time_bulk = "date-time"
+        evcc_id = "MAC-address"
+        remaining_energy_needed = "Wh"
+        battery_capacity = "Wh"
+        battery_full_soc = "%"
+        battery_bulk_soc = 80
+    
+    telemetry = object
+        evse_temperature_C = float
+        plug_temperature_C = float
+        fan_rpm = 0
+        supply_voltage_12v = float
+        supply_voltage_minus_12v = float
+        relais_on = bool
+    
+    powermeter = object
+        timestamp = "date-time"
+        meter_id = "sketchy_multiplication"
+        energy_Wh_import = object
+            total = float
+        energy_Wh_export = object   # optional
+            total = float
+        current_A = float   # optional
+        voltage_V = float   # optional
+        power_W = float     # optional
+
+
+
+CMDs:
+    get_evse()
+    Result = object
+        id = 1
+        connectors = []
+            id = 1
+            type = "cCCS2"
+
+    enable_disable()
+        connector_id = int
+        cmd_source = object 
+            enable_source = "sourceEnum"
+            enable_state = "stateEnum"
+            enable_priority = int   # 0 is highest prio
+    Result = bool   # true if enabled, false if disabled after CMD
+
+    reserve()
+        reservation_id = int
+    Result = bool   # true if accepted
+
+    pause_charging()
+    Result = bool   # true if paused after CMD
+
+    resume_charging()
+    Result = bool   # true is resumed after CMD 
+
+
+
+
+{
+  "data": {
+    "args": {
+      "cmd_source": {
+        "enable_source": "ServiceTechnician",
+        "enable_state": "Enable",
+        "enable_priority": 0
+      },
+      "connector_id": 0
+    },
+    "origin": "manager"
+  },
+  "name": "enable_disable",
+  "type": "call"
+}
