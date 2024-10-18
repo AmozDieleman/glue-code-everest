@@ -112,11 +112,11 @@ def publish_var_json(client):
         msg = json.dumps(var_standard, separators=(",",":"))
         result = client.publish(topic_var, msg)
         # result: [0, 1]
-        status = result[0]
-        if status == 0:
-            print(f"Succesfully sent var")
-        else:
-            print(f"Failed to send var")
+        # status = result[0]
+        # if status == 0:
+        #     print(f"Succesfully sent var")
+        # else:
+        #     print(f"Failed to send var")
         var += 1
 
 def read_cmd_to_dict(client: mqtt_client):
