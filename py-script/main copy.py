@@ -3,6 +3,7 @@
 import json
 import sys
 import time
+import asyncio
 
 from threading import Thread
 from paho.mqtt import client as mqtt_client
@@ -90,9 +91,10 @@ broker ="192.168.192.150"
 port = 1883
 topic_var = "everest/evse_manager/evse/var"
 topic_cmd = "everest/evse_manager_1/evse/cmd"
-client_id = "dco-evse-1234-1"
+client_id_publish = "dco-pub-1234-1"
+client_id_read = "dco-rd-1234-1"
 
-def connect_mqtt():
+def connect_mqtt(client_id):
     def on_connect(client, userdata, flags, rc, properties):
         if rc == 0:
             print("Succesfully connected to MQTT broker")
@@ -104,22 +106,21 @@ def connect_mqtt():
     return client
 
 
-def publish_var_json(client):
-    var = 0
-    while True:
-        time.sleep(0.2)
-        var_standard['data'], var_standard['name'] = vars_dict[vars_dict_key_list[var%9]], vars_dict_key_list[var%9]
-        msg = json.dumps(var_standard, separators=(",",":"))
-        result = client.publish(topic_var, msg)
+async def publish_var_json(client):
+    # while True:
+    # await asyncio.sleep(0.2)
+    var_standard['data'], var_standard['name'] = vars_dict[vars_dict_key_list[2]], vars_dict_key_list[2]
+    msg = json.dumps(var_standard, separators=(",",":"))
+    result = client.publish(topic_var, msg)
         # result: [0, 1]
-        status = result[0]
-        if status == 0:
-            print(f"Succesfully sent var")
-        else:
-            print(f"Failed to send var")
-        var += 1
+        # status = result[0]
+        # if status == 0:
+        #     print(f"Succesfully sent var")
+        # else:
+        #     print(f"Failed to send var")
+    # var += 1
 
-def read_cmd_to_dict(client: mqtt_client):
+async def read_cmd_to_dict(client: mqtt_client):
     def on_message(client, userdata, msg):
         print(f"Received `{json.loads(msg.payload.decode())}")
 
@@ -127,23 +128,27 @@ def read_cmd_to_dict(client: mqtt_client):
     client.on_message = on_message
 
 
-
-
-def run():
-    try:
-        client = connect_mqtt()
-        t1 = Thread(target=read_cmd_to_dict, args=(client,))
-        t2 = Thread(target=publish_var_json, args=(client,))
-        # read_cmd_to_dict(client)
-        # publish_var_json(client)
-        t1.start()
-        t2.start()
-        client.loop_forever()
-    except KeyboardInterrupt:
-        client.loop_stop()
-        t1.join()
-        t2.join()
-        sys.exit(0)
+# async def run():
+#     try:
+#         client = connect_mqtt()
+#         t1 = Thread(target=read_cmd_to_dict, args=(client,))
+#         t2 = Thread(target=publish_var_json, args=(client,))
+#         # read_cmd_to_dict(client)
+#         # publish_var_json(client)
+#         t1.start()
+#         t2.start()
+#         client.loop_forever()
+#     except KeyboardInterrupt:
+#         client.loop_stop()
+#         t1.join()
+#         t2.join()
+#         sys.exit(0)
 
 if __name__ == '__main__':
-    run()
+    client_pub = connect_mqtt(client_id_publish)
+    client_rd = connect_mqtt(client_id_read)
+    asyncio.run(publish_var_json(client_pub))
+    client_pub.loop_forever()
+    asyncio.run(read_cmd_to_dict(client_rd))
+    client_rd.loop_forever()
+
