@@ -1,7 +1,7 @@
 # Essential VAR's and CMD's for the evse_manager interface
 # date-time variables are according to RFC3339 UTC
 
-VARs:
+vars:
     evse_id = "NL*DCO*E1234*1"
     
     ready = bool
@@ -32,7 +32,6 @@ VARs:
         max_phase_count_export = 1
         min_phase_count_export = 1
         supports_changing_phases_during_charging = False
-        max_plug_temperature_C = 75
         connector_type = "IEC62196Type2Cable"
     
     ev_info = object # if available
@@ -56,7 +55,6 @@ VARs:
     
     telemetry = object
         evse_temperature_C = float
-        plug_temperature_C = float
         fan_rpm = 0
         supply_voltage_12v = float
         supply_voltage_minus_12v = float
@@ -75,7 +73,7 @@ VARs:
 
 
 
-CMDs:
+cmds:
     get_evse()
     Result = object
         id = 1
