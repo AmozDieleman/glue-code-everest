@@ -91,64 +91,70 @@ broker ="192.168.192.150"
 port = 1883
 topic_var = "everest/evse_manager/evse/var"
 topic_cmd = "everest/evse_manager_1/evse/cmd"
-client_id_publish = "dco-pub-1234-1"
-client_id_read = "dco-rd-1234-1"
+client_id = "dco-evse-1234"
+# client_id_publish = "dco-pub-1234"
+# client_id_read = "dco-rd-1234"
 
-def connect_mqtt(client_id):
-    def on_connect(client, userdata, flags, rc, properties):
-        if rc == 0:
-            print("Succesfully connected to MQTT broker")
-        else:
-            print("Failed to connect, return code %d/n", rc)
+def connect_mqtt():
     client = mqtt_client.Client(client_id=client_id, callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2)
-    client.on_connect = on_connect
     client.connect(broker,port)
     return client
 
 
-async def publish_var_json(client):
-    # while True:
-    # await asyncio.sleep(0.2)
-    var_standard['data'], var_standard['name'] = vars_dict[vars_dict_key_list[2]], vars_dict_key_list[2]
+async def publish_var_json(client: mqtt_client, var):
+    var_standard['data'], var_standard['name'] = vars_dict[var], var
     msg = json.dumps(var_standard, separators=(",",":"))
-    result = client.publish(topic_var, msg)
-        # result: [0, 1]
-        # status = result[0]
-        # if status == 0:
-        #     print(f"Succesfully sent var")
-        # else:
-        #     print(f"Failed to send var")
-    # var += 1
+    client.publish(topic_var, msg)
+
 
 async def read_cmd_to_dict(client: mqtt_client):
     def on_message(client, userdata, msg):
-        print(f"Received `{json.loads(msg.payload.decode())}")
+        print(f'Received {json.loads(msg.payload.decode())}')
 
     client.subscribe(topic_cmd)
     client.on_message = on_message
 
 
-# async def run():
-#     try:
-#         client = connect_mqtt()
-#         t1 = Thread(target=read_cmd_to_dict, args=(client,))
-#         t2 = Thread(target=publish_var_json, args=(client,))
-#         # read_cmd_to_dict(client)
-#         # publish_var_json(client)
-#         t1.start()
-#         t2.start()
-#         client.loop_forever()
-#     except KeyboardInterrupt:
-#         client.loop_stop()
-#         t1.join()
-#         t2.join()
-#         sys.exit(0)
+async def main():
+
+    try:
+        client = connect_mqtt()
+        client.loop_start()
+    except Exception as e:
+        print(f'Failed to connect: {e}')
+        exit(-1)
+
+    print()
+
+    tasks: set[asyncio.Task[None]] = set()
+
+    
+
+    task_publish_var_json = asyncio.create_task(publish_var_json(client))
+    task_read_cmd_to_dict = asyncio.create_task(read_cmd_to_dict(client))
+
+    print()
+
+    tasks.add(task_publish_var_json)
+    tasks.add(task_read_cmd_to_dict)
+
+    try:
+        exceptions = asyncio.gather(*tasks, return_exceptions=False)
+        await exceptions
+
+    except Exception as e:
+        print(f'Exited main: {e}')
+
+    client.loop_stop()
+    exit(0)
+
+
+def run():
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print('Terminated manually')
+        exit(0)
 
 if __name__ == '__main__':
-    client_pub = connect_mqtt(client_id_publish)
-    client_rd = connect_mqtt(client_id_read)
-    asyncio.run(publish_var_json(client_pub))
-    client_pub.loop_forever()
-    asyncio.run(read_cmd_to_dict(client_rd))
-    client_rd.loop_forever()
-
+    run()
