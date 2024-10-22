@@ -77,7 +77,7 @@ cmds:
     get_evse()
     Result = object
         id = 1
-        connectors = []
+        connectors = array
             id = 1
             type = "cCCS2"
 
@@ -97,7 +97,7 @@ cmds:
     Result = bool   # true if paused after CMD
 
     resume_charging()
-    Result = bool   # true is resumed after CMD 
+    Result = bool   # true if resumed after CMD 
 
 
 
