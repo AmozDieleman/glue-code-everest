@@ -90,7 +90,7 @@ cmd_standard = {}
 broker ="192.168.192.150"
 port = 1883
 topic_var = "everest/evse_manager/evse/var"
-topic_cmd = "everest/evse_manager_1/evse/cmd"
+topic_cmd = "everest/evse_manager/evse/cmd"
 client_id = "dco-evse-1234"
 # client_id_publish = "dco-pub-1234"
 # client_id_read = "dco-rd-1234"
@@ -101,7 +101,7 @@ def connect_mqtt():
     return client
 
 
-async def publish_var_json(client: mqtt_client, var):
+async def publish_var_json(client: mqtt_client, var=0):
     var_standard['data'], var_standard['name'] = vars_dict[var], var
     msg = json.dumps(var_standard, separators=(",",":"))
     client.publish(topic_var, msg)
@@ -119,7 +119,6 @@ async def main():
 
     try:
         client = connect_mqtt()
-        client.loop_start()
     except Exception as e:
         print(f'Failed to connect: {e}')
         exit(-1)
@@ -132,6 +131,7 @@ async def main():
 
     task_publish_var_json = asyncio.create_task(publish_var_json(client))
     task_read_cmd_to_dict = asyncio.create_task(read_cmd_to_dict(client))
+    client.loop_forever()
 
     print()
 
@@ -145,7 +145,6 @@ async def main():
     except Exception as e:
         print(f'Exited main: {e}')
 
-    client.loop_stop()
     exit(0)
 
 
