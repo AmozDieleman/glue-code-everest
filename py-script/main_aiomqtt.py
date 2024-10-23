@@ -100,14 +100,14 @@ cmds_dict = {
             "provided_token":"insert token",
             "validation_result":"insert result"
         },
-        "result":{}
+        "result":None
     },
     
     # No args or result, cannot start transaction after call.
     "withdraw_authorization":{
         "args":{},
         "to_do":"don't start transaction",
-        "result":{}
+        "result":None
     },
 
     # Call to signal that EVSE is reserved, return True if reservation is accepted, false if rejected.
@@ -122,14 +122,14 @@ cmds_dict = {
     "cancel_reservation":{
         "args":{},
         "to_do":"cancel_reservation()",
-        "result":{}
+        "result":None
     },
 
     # No args or result, set EVSE to faulted externally after call.
     "set_faulted":{
         "args":{},
         "to_do":"set_evse_faulted()",
-        "result":{}
+        "result":None
     },
 
     # No args, pause charging, return True if charging paused after call, False otherwise.
@@ -141,7 +141,7 @@ cmds_dict = {
     # No args, resume charging, return True if charging resumed after call, False otherwise.
     "resume_charging":{
         "args":{},
-        "result": False
+        "result":False
     },
 
     # Forces connector to unlock immediately, return True if succesfully unlocked, False otherwise.
@@ -155,7 +155,7 @@ cmds_dict = {
     # No result, set energy limits at specified node
     "set_external_limits":{
         "args":{},
-        "result":{}
+        "result":None
     },
 
     # No args, return True if call was used by EVSE
@@ -193,14 +193,16 @@ topic_cmd = "everest/evse_manager/evse/cmd"
 
 
 def cmd_handler(cmd):
+    print(cmd)
     cmds_dict[cmd["name"]]["args"]  = cmd["data"]["args"]
     cmd_standard["data"]["id"]      = cmd["data"]["id"]
     cmd_standard["data"]["retval"]  = cmds_dict[cmd["name"]]["result"]
     cmd_standard["name"]            = cmd["name"]
+
+    result = json.dumps(cmd_standard, separators=(",",":"))
+    print(result)
     
-    msg = json.dumps(cmd_standard, separators=(",",":"))
-    
-    return msg
+    return result
 
 
 async def publish_var_json(client, var=0):
@@ -215,10 +217,14 @@ async def publish_var_json(client, var=0):
 async def read_cmd_to_dict(client):
     await client.subscribe(topic_cmd)
     async for message in client.messages:
-        print(json.loads(message.payload))
-        if message.payload["type"] == "call":
-            msg = cmd_handler(json.loads(message.payload))
-            await client.publish(topic_cmd, payload=json.dumps(msg))
+        cmd = json.loads(message.payload)
+        print(cmd)
+        try:
+            if cmd["type"] == "call":
+                result = cmd_handler(cmd)
+                await client.publish(topic_cmd, payload=result)
+        except Exception as e:
+            print(e)
 
 
 async def main():
