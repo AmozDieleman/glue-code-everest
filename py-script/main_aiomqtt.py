@@ -79,49 +79,93 @@ vars_dict_key_list = list(vars_dict.keys())
 
 cmds_dict = {
     "get_evse":{
+        "args":{},
         "result":{
             "id":1,
             "connectors":[[1,"cCCS2"]]
         }
     },
 
+    # Add function to check status EVSE after command, result is true when turned on after cmd and false if turned off after cmd. 
     "enable_disable":{
-        "connector_id":"",
-        "cmd_source":"insert source",
-        # Add function to check status EVSE after command, result is true when turned on after cmd and false if turned off after cmd. 
+        "args":{
+            "connector_id":"",
+            "cmd_source":"insert source"
+        },
         "result":True
     },
 
     "authorize_response":{
-        "provided_token":"insert token",
-        "validation_result":"insert result"
+        "args":{
+            "provided_token":"insert token",
+            "validation_result":"insert result"
+        },
+        "result":{}
     },
     
     # No args or result, cannot start transaction after call.
-    "withdraw_authorization":"don't start transaction",
+    "withdraw_authorization":{
+        "args":{},
+        "to_do":"don't start transaction",
+        "result":{}
+    },
 
     # Call to signal that EVSE is reserved, return True if reservation is accepted, false if rejected.
     "reserve":{
-        "reservation_id":"",
+        "args":{
+            "reservation_id":""
+        },
         "result":False
     },
 
     # No args or result, EVSE no longer reserved after call.
-    "cancel_reservation":"cancel_reservation()",
+    "cancel_reservation":{
+        "args":{},
+        "to_do":"cancel_reservation()",
+        "result":{}
+    },
 
     # No args or result, set EVSE to faulted externally after call.
-    "set_faulted":"set_evse_faulted()",
+    "set_faulted":{
+        "args":{},
+        "to_do":"set_evse_faulted()",
+        "result":{}
+    },
 
     # No args, pause charging, return True if charging paused after call, False otherwise.
     "pause_charging":{
+        "args":{},
         "result":False
     },
 
     # No args, resume charging, return True if charging resumed after call, False otherwise.
     "resume_charging":{
+        "args":{},
         "result": False
     },
 
+    # Forces connector to unlock immediately, return True if succesfully unlocked, False otherwise.
+    "force_unlock":{
+        "args":{
+            "connector_id":0
+        },
+        "result":False
+    },
+
+    # No result, set energy limits at specified node
+    "set_external_limits":{
+        "args":{},
+        "result":{}
+    },
+
+    # No args, return True if call was used by EVSE
+    "external_ready_to_start_charging":{
+        "args":{},
+        "result":False
+    }
+}
+
+# To be implemented in cmds_dict
     # Request to stop transaction, return True if succesful.
     # "stop_transaction":{
     #     "request"{
@@ -129,58 +173,37 @@ cmds_dict = {
     #     },
     #     "result":False
     # },
-
-    # Forces connector to unlock immediately, return True if succesfully unlocked, False otherwise.
-    "force_unlock":{
-        "connector_id":1,
-        "result":False
-    },
-
-    # No result, set energy limits at specified node
-    # "set_external_limits":{
-    #     "value" -> object:{
-
-    #     }
-    # },
-
     # No result, set Contract Certificate
     # "set_get_certificate_response":{
-    #     "certificate_response" -> object:{
+    #     "certificate_response":{
 
     #     }
     # },
 
-    # No args, return True if call was used by EVSE
-    "external_ready_to_start_charging":{
-        "result":False
-    }
-}
 cmds_dict_key_list = list(cmds_dict.keys())
 
 
 broker = "192.168.192.150"
 
 var_standard = {"data":"insert_data_object","name":"insert_var_name"}
-cmd_standard = {"data":{"id":"insert id from call","origin":"evse_manager","retval":"insert return value"},"name":"insert name of call","type":"result"}
+cmd_standard = {"data":{"id":"call_id","origin":"evse_manager","retval":{}},"name":"call_name","type":"result"}
 
 topic_var = "everest/evse_manager/evse/var"
 topic_cmd = "everest/evse_manager/evse/cmd"
 
 
-def cmd_handler(cmd, client):
-    if cmd["type"] == "call":
-        cmd_standard["data"]["id"] = cmd["data"]["id"]
-        cmd_standard["data"]["retval"] = cmds_dict[cmd["name"]]["result"]
-        cmd_standard["name"] = cmd["name"]
-        msg = json.dumps(var_standard, separators=(",",":"))
-        
-        return msg
-
-    else:
-        pass
+def cmd_handler(cmd):
+    cmds_dict[cmd["name"]]["args"]  = cmd["data"]["args"]
+    cmd_standard["data"]["id"]      = cmd["data"]["id"]
+    cmd_standard["data"]["retval"]  = cmds_dict[cmd["name"]]["result"]
+    cmd_standard["name"]            = cmd["name"]
+    
+    msg = json.dumps(cmd_standard, separators=(",",":"))
+    
+    return msg
 
 
-async def publish_json(client, var=0):
+async def publish_var_json(client, var=0):
     while True:
         for var in vars_dict_key_list:
             await asyncio.sleep(0.2)
@@ -193,8 +216,9 @@ async def read_cmd_to_dict(client):
     await client.subscribe(topic_cmd)
     async for message in client.messages:
         print(json.loads(message.payload))
-        msg = cmd_handler(json.loads(message.payload))
-        await client.publish(topic_cmd, payload=msg)
+        if message.payload["type"] == "call":
+            msg = cmd_handler(json.loads(message.payload))
+            await client.publish(topic_cmd, payload=json.dumps(msg))
 
 
 async def main():
@@ -215,3 +239,10 @@ run()
 
 # if __name__ == "__main__":
 #     run()
+
+# print(cmd_standard["data"]["id"])
+
+# cmd = json.loads('{"data":{"args":"","id":"123412341234","origin":"auth"},"name":"get_evse","type":"call"}')
+# print(cmd["data"]["id"])
+# msg = cmd_handler(cmd)
+# print(msg)
